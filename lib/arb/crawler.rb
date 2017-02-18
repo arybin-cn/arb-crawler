@@ -15,6 +15,16 @@ module Arb
         client
       end
 
+      define_method :filter_str do |str, black_list=nil|
+      black_list||=%w{\ / : * ? < > |} << "\n"
+      black_list.each do |i|
+        loop do
+          break unless str.sub!(i,'')
+        end
+      end
+      str
+      end
+
       define_method :filename_of_url do |url|
         url && url[url.rindex('/')+1..-1]
       end
@@ -34,18 +44,24 @@ module Arb
       methods.each do |method|
         ways.each do |way|
           define_method "#{method}_by_#{way}_raw" do |url,css_or_xpath,&blk|
-            ::Nokogiri.parse(client.send(method,url).body).send(way,css_or_xpath).tap do |res|
-              if blk
-                res.each do |e|
-                  blk[e]
+            begin
+              ::Nokogiri.parse(client.send(method,url).body).send(way,css_or_xpath).tap do |res|
+                if blk
+                  res.each do |e|
+                    blk[e]
+                  end
                 end
               end
+            rescue Exception=>e
+              $stderr.puts e
+              nil
             end
           end
 
           define_method "#{method}_by_#{way}" do |url,css_or_xpath,&blk|
             [].tap do |arr|
-              send("#{method}_by_#{way}_raw",url,css_or_xpath).each do |nokogiri_element|
+              raw=send("#{method}_by_#{way}_raw",url,css_or_xpath)
+              raw && raw.each do |nokogiri_element|
                 arr<<Hash.new.tap do |hash|
                   nokogiri_element.attributes.keys.each do |key|
                     hash[key.to_sym]=nokogiri_element.attribute(key).value
@@ -53,7 +69,7 @@ module Arb
                   hash.singleton_class.send :define_method, :text do
                     nokogiri_element.text
                   end
-                  blk[e] if blk
+                  blk[hash] if blk
                 end
               end
             end
