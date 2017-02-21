@@ -31,14 +31,16 @@ module Arb
 
       define_method :download do |url,file|
         begin
+          data=nil
           File.open file,'wb+' do |file|
-            file<<client.get(url).body
+            data=client.get(url).body
+            file<<data
           end
         rescue Exception=>e
           $stderr.puts e
-          false
+          nil
         end
-        true
+        data.size
       end
 
       methods.each do |method|
