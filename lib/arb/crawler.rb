@@ -40,7 +40,7 @@ module Arb
           $stderr.puts e
           nil
         end
-        data.size
+        data.size rescue 0
       end
 
       methods.each do |method|
