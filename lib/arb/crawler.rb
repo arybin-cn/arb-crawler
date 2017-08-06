@@ -40,7 +40,7 @@ module Arb
           $stderr.puts e
           nil
         end
-        data.size rescue 0
+        data.size
       end
 
       methods.each do |method|
@@ -60,7 +60,8 @@ module Arb
             end
           end
 
-          define_method "#{method}_by_#{way}" do |url,css_or_xpath,&blk|
+          #Make sure that the content_key distinct from those attribute keys
+          define_method "#{method}_by_#{way}" do |url,css_or_xpath,content_key=:text,&blk|
             [].tap do |arr|
               raw=send("#{method}_by_#{way}_raw",url,css_or_xpath)
               raw && raw.each do |nokogiri_element|
@@ -68,8 +69,10 @@ module Arb
                   nokogiri_element.attributes.keys.each do |key|
                     hash[key.to_sym]=nokogiri_element.attribute(key).value
                   end
-                  hash.singleton_class.send :define_method, :text do
-                    nokogiri_element.text
+                  if hash.keys.include?(content_key.to_sym)
+                    puts("Warning: Content key #{content_key} can not be used due to conflict!")
+                  else
+                    hash[content_key]=nokogiri_element.text
                   end
                   blk[hash] if blk
                 end
